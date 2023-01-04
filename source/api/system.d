@@ -1,10 +1,12 @@
 module api.system;
-@nogc nothrow:
+nothrow:
 extern (C):
 __gshared:
+import std.string : toStringz, fromStringz;
 import bindbc.sdl;
 import bindbc.lua;
-public import core.stdc.string : strcpy, strerror, strcmp;
+public import core.stdc.string : strcpy, strerror, strcmp, strlen;
+public import core.stdc.stdio : sprintf;
 public import core.stdc.ctype;
 public import core.sys.posix.dirent;
 public import core.sys.posix.unistd;
@@ -37,11 +39,12 @@ private const(char)* button_name(int button)
 
 private char* key_name(char* dst, int sym)
 {
-    strcpy(dst, SDL_GetKeyName(sym));
+    // strcpy(dst, SDL_GetKeyName(cast(SDL_Keycode) sym));
+    dst = cast(char*) SDL_GetKeyName(cast(SDL_Keycode) sym);
     char* p = dst;
     while (*p)
     {
-        *p = tolower(*p);
+        *p = cast(char) tolower(*p);
         p++;
     }
     return dst;
@@ -109,14 +112,14 @@ top:
         return 2;
 
     case SDL_TEXTINPUT:
-        lua_pushstring(L, "textinput");
-        lua_pushstring(L, e.text.text);
+        lua_pushstring(L, cast(const(char)*) "textinput");
+        lua_pushstring(L, cast(const(char)*) e.text.text);
         return 2;
 
     case SDL_MOUSEBUTTONDOWN:
         if (e.button.button == 1)
         {
-            SDL_CaptureMouse(1);
+            SDL_CaptureMouse(SDL_TRUE);
         }
         lua_pushstring(L, "mousepressed");
         lua_pushstring(L, button_name(e.button.button));
@@ -128,7 +131,7 @@ top:
     case SDL_MOUSEBUTTONUP:
         if (e.button.button == 1)
         {
-            SDL_CaptureMouse(0);
+            SDL_CaptureMouse(SDL_FALSE);
         }
         lua_pushstring(L, "mousereleased");
         lua_pushstring(L, button_name(e.button.button));
@@ -174,7 +177,7 @@ private int f_set_cursor(lua_State* L)
     SDL_Cursor* cursor = cursor_cache[n];
     if (!cursor)
     {
-        cursor = SDL_CreateSystemCursor(n);
+        cursor = SDL_CreateSystemCursor(cast(SDL_SystemCursor) n);
         cursor_cache[n] = cursor;
     }
     SDL_SetCursor(cursor);
@@ -233,7 +236,7 @@ private int f_show_confirm_dialog(lua_State* L)
     }
     else
     {
-        SDL_MessageBoxButtonData[3] buttons = [
+        SDL_MessageBoxButtonData* buttons = [
             {SDL_MESSAGEBOX_BUTTON_RETURNKEY_DEFAULT, 1, "Yes"},
             {SDL_MESSAGEBOX_BUTTON_ESCAPEKEY_DEFAULT, 0, "No"},
         ];
@@ -272,18 +275,19 @@ private int f_list_dir(lua_State* L)
 
     lua_newtable(L);
     int i = 1;
-    dirent* entry = void;
-    while ((entry = readdir(dir)))
+    dirent* entry = readdir(dir);
+    while (entry)
     {
-        if (strcmp(entry.d_name, ".") == 0)
+        entry = readdir(dir);
+        if (entry.d_name.fromStringz == ".")
         {
             continue;
         }
-        if (strcmp(entry.d_name, "..") == 0)
+        if (entry.d_name.fromStringz == "..")
         {
             continue;
         }
-        lua_pushstring(L, entry.d_name);
+        lua_pushstring(L, cast(const(char)*) entry.d_name.toStringz);
         lua_rawseti(L, -2, i);
         i++;
     }
@@ -301,14 +305,24 @@ version (Windows)
 
 private int f_absolute_path(lua_State* L)
 {
-    const(char)* path = luaL_checkstring(L, 1);
-    char* res = realpath(path, null);
+    import std.path : absolutePath;
+
+    string path = cast(string) fromStringz(luaL_checkstring(L, 1));
+    string res;
+    try
+    {
+        res = absolutePath(path);
+    }
+    catch (Exception)
+    {
+        res = null;
+    }
+
     if (!res)
     {
         return 0;
     }
-    lua_pushstring(L, res);
-    free(res);
+    lua_pushstring(L, res.toStringz);
     return 1;
 }
 
@@ -316,7 +330,10 @@ private int f_get_file_info(lua_State* L)
 {
     const(char)* path = luaL_checkstring(L, 1);
 
-    stat s = void;
+    // import std.file : getAttributes;
+
+    stat_t s;
+
     int err = stat(path, &s);
     if (err < 0)
     {
@@ -378,15 +395,17 @@ private int f_get_time(lua_State* L)
 private int f_sleep(lua_State* L)
 {
     double n = luaL_checknumber(L, 1);
-    SDL_Delay(n * 1000);
+    SDL_Delay(cast(uint) n * 1000);
     return 0;
 }
 
 private int f_exec(lua_State* L)
 {
+    import core.stdc.stdlib;
+
     size_t len = void;
     const(char)* cmd = luaL_checklstring(L, 1, &len);
-    char* buf = malloc(len + 32);
+    char* buf = cast(char*) malloc(len + 32);
     if (!buf)
     {
         luaL_error(L, "buffer allocation failed");
@@ -460,6 +479,6 @@ private const(luaL_Reg)[17] lib = [
 
 int luaopen_system(lua_State* L)
 {
-    luaL_newlib(L, lib.ptr);
+    luaL_newlib(L, lib);
     return 1;
 }

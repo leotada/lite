@@ -3,10 +3,11 @@ extern (C):
 __gshared:
 public import core.stdc.stdio;
 
-//public import SDL2/SDL;
 import bindbc.sdl;
+import bindbc.lua;
 import api;
 public import renderer;
+public import core.stdc.string : strcpy, strerror, strcmp, strlen;
 
 version (Windows)
 {
@@ -48,7 +49,7 @@ private void get_exe_filename(char* buf, int sz)
     {
         char[512] path = void;
         sprintf(path.ptr, "/proc/%d/exe", getpid());
-        int len = readlink(path.ptr, buf, sz - 1);
+        int len = cast(int) readlink(path.ptr, buf, sz - 1);
         buf[len] = '\0';
     }
     version (OSX)
@@ -69,12 +70,13 @@ private void init_window_icon()
     }
     else
     {
-        //public import ...icon.i;
-        cast(void) icon_rgba_len; /* unused */
-        SDL_Surface* surf = SDL_CreateRGBSurfaceFrom(icon_rgba, 64, 64, 32,
-                64 * 4, 0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000);
-        SDL_SetWindowIcon(window, surf);
-        SDL_FreeSurface(surf);
+        // import icon.inl;
+
+        // cast(void) icon_rgba_len; /* unused */
+        // SDL_Surface* surf = SDL_CreateRGBSurfaceFrom(icon_rgba, 64, 64, 32,
+        //         64 * 4, 0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000);
+        // SDL_SetWindowIcon(window, surf);
+        // SDL_FreeSurface(surf);
     }
 }
 
@@ -90,16 +92,14 @@ int main(int argc, char** argv)
     SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
     SDL_EnableScreenSaver();
     SDL_EventState(SDL_DROPFILE, SDL_ENABLE);
-    atexit(SDL_Quit);
+    scope (exit)
+        SDL_Quit();
 
     version (SDL_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR)
     { /* Available since 2.0.8 */
         SDL_SetHint(SDL_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR, "0");
     }
-    static if (SDL_VERSION_ATLEAST(2, 0, 5))
-    {
-        SDL_SetHint(SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH, "1");
-    }
+    SDL_SetHint(SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH, "1");
 
     SDL_DisplayMode dm = void;
     SDL_GetCurrentDisplayMode(0, &dm);

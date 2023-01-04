@@ -80,7 +80,7 @@ private int f_draw_rect(lua_State* L)
 
 private int f_draw_text(lua_State* L)
 {
-    RenFont** font = luaL_checkudata(L, 1, API_TYPE_FONT);
+    RenFont** font = cast(RenFont**) luaL_checkudata(L, 1, API_TYPE_FONT);
     const(char)* text = luaL_checkstring(L, 2);
     int x = cast(int) luaL_checknumber(L, 3);
     int y = cast(int) luaL_checknumber(L, 4);
@@ -101,7 +101,7 @@ int luaopen_renderer_font(lua_State* L);
 
 int luaopen_renderer(lua_State* L)
 {
-    luaL_newlib(L, lib.ptr);
+    luaL_newlib(L, lib);
     luaopen_renderer_font(L);
     lua_setfield(L, -2, "font");
     return 1;

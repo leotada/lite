@@ -1,5 +1,5 @@
 module api;
-@nogc nothrow:
+nothrow:
 extern (C):
 import bindbc.lua;
 

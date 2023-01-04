@@ -1,9 +1,10 @@
 module renderer;
-@nogc nothrow:
+nothrow:
 extern (C):
 __gshared:
 import bindbc.sdl;
 public import core.stdc.stdio;
+import core.stdc.stdlib : malloc, calloc, free, exit;
 
 //public import stdbool;
 public import core.stdc.assert_;
@@ -61,8 +62,8 @@ private void* check_alloc(void* ptr)
 {
     if (!ptr)
     {
-        fprintf(stderr, "Fatal error: memory allocation failed\n");
-        exit(EXIT_FAILURE);
+        cast(int) fprintf(stderr, "Fatal error: memory allocation failed\n");
+        exit(1);
     }
     return ptr;
 }
@@ -135,9 +136,9 @@ void ren_get_size(int* x, int* y)
 RenImage* ren_new_image(int width, int height)
 {
     assert(width > 0 && height > 0);
-    RenImage* image = malloc(sizeofcast(RenImage) + width * height * RenColor.sizeof);
+    RenImage* image = new RenImage;
     check_alloc(image);
-    image.pixels = cast(void*)(image + 1);
+    // image.pixels = cast(void*)(image.ptr + 1);
     image.width = width;
     image.height = height;
     return image;
@@ -150,7 +151,8 @@ void ren_free_image(RenImage* image)
 
 private GlyphSet* load_glyphset(RenFont* font, int idx)
 {
-    GlyphSet* set = check_alloc(calloc(1, GlyphSet.sizeof));
+    // GlyphSet* set = check_alloc(calloc(1, GlyphSet.sizeof));
+    GlyphSet* set = new GlyphSet;
 
     /* init image */
     int width = 128;
@@ -158,37 +160,45 @@ private GlyphSet* load_glyphset(RenFont* font, int idx)
 retry:
     set.image = ren_new_image(width, height);
 
-    /* load glyphs */
-    float s = stbtt_ScaleForMappingEmToPixels(&font.stbfont, 1) / stbtt_ScaleForPixelHeight(
-            &font.stbfont, 1);
-    int res = stbtt_BakeFontBitmap(font.data, 0, font.size * s,
-            cast(void*) set.image.pixels, width, height, idx * 256, 256, set.glyphs);
+    // /* load glyphs */
+    // float s = stbtt_ScaleForMappingEmToPixels(&font.stbfont, 1) / stbtt_ScaleForPixelHeight(
+    //         &font.stbfont, 1);
+    // int res = stbtt_BakeFontBitmap(font.data, 0, font.size * s,
+    //         cast(void*) set.image.pixels, width, height, idx * 256, 256, set.glyphs);
 
-    /* retry with a larger image buffer if the buffer wasn't large enough */
-    if (res < 0)
-    {
-        width *= 2;
-        height *= 2;
-        ren_free_image(set.image);
-        goto retry;
-    }
+    // /* retry with a larger image buffer if the buffer wasn't large enough */
+    // if (res < 0)
+    // {
+    //     width *= 2;
+    //     height *= 2;
+    //     ren_free_image(set.image);
+    //     goto retry;
+    // }
 
     /* adjust glyph yoffsets and xadvance */
     int ascent = void, descent = void, linegap = void;
-    stbtt_GetFontVMetrics(&font.stbfont, &ascent, &descent, &linegap);
-    float scale = stbtt_ScaleForMappingEmToPixels(&font.stbfont, font.size);
-    int scaled_ascent = ascent * scale + 0.5;
-    for (int i = 0; i < 256; i++)
+    try
     {
-        set.glyphs[i].yoff += scaled_ascent;
-        set.glyphs[i].xadvance = floor(set.glyphs[i].xadvance);
+        stbtt_GetFontVMetrics(&font.stbfont, &ascent, &descent, &linegap);
+
+        float scale = stbtt_ScaleForMappingEmToPixels(&font.stbfont, font.size);
+        int scaled_ascent = cast(int)(ascent * scale + 0.5);
+        for (int i = 0; i < 256; i++)
+        {
+            set.glyphs[i].yoff += scaled_ascent;
+            set.glyphs[i].xadvance = floor(set.glyphs[i].xadvance);
+        }
+    }
+    catch (Exception)
+    {
+        return null; // TODO
     }
 
     /* convert 8bit data to 32bit */
     for (int i = width * height - 1; i >= 0; i--)
     {
         ubyte n = *(cast(ubyte*) set.image.pixels + i);
-        set.image.pixels[i] = RenColor(r = 255, g = 255, b = 255, a = n);
+        set.image.pixels[i] = RenColor(255, 255, 255, n);
     }
 
     return set;
@@ -210,7 +220,8 @@ RenFont* ren_load_font(const(char)* filename, float size)
     FILE* fp = null;
 
     /* init font */
-    font = check_alloc(calloc(1, RenFont.sizeof));
+    // font = check_alloc(calloc(1, RenFont.sizeof));
+    font = new RenFont;
     font.size = size;
 
     /* load font into buffer */
@@ -221,34 +232,42 @@ RenFont* ren_load_font(const(char)* filename, float size)
     }
     /* get size */
     fseek(fp, 0, SEEK_END);
-    int buf_size = ftell(fp);
+    int buf_size = cast(int) ftell(fp);
     fseek(fp, 0, SEEK_SET);
     /* load */
     font.data = check_alloc(malloc(buf_size));
-    int _ = fread(font.data, 1, buf_size, fp);
+    int _ = cast(int) fread(font.data, 1, buf_size, fp);
     cast(void) _;
     fclose(fp);
     fp = null;
 
     /* init stbfont */
-    int ok = stbtt_InitFont(&font.stbfont, font.data, 0);
-    if (!ok)
+    try
+    {
+        int ok = cast(int) stbtt_InitFont(&font.stbfont, cast(const(ubyte)*) font.data, 0);
+        if (!ok)
+        {
+            goto fail;
+        }
+
+        /* get height and scale */
+        int ascent = void, descent = void, linegap = void;
+        stbtt_GetFontVMetrics(&font.stbfont, &ascent, &descent, &linegap);
+        float scale = stbtt_ScaleForMappingEmToPixels(&font.stbfont, size);
+        font.height = cast(int)((ascent - descent + linegap) * scale + 0.5);
+
+        /* make tab and newline glyphs invisible */
+        stbtt_bakedchar* g = get_glyphset(font, '\n').glyphs.ptr;
+        g['\t'].x1 = g['\t'].x0;
+        g['\n'].x1 = g['\n'].x0;
+
+        return font;
+
+    }
+    catch (Exception)
     {
         goto fail;
     }
-
-    /* get height and scale */
-    int ascent = void, descent = void, linegap = void;
-    stbtt_GetFontVMetrics(&font.stbfont, &ascent, &descent, &linegap);
-    float scale = stbtt_ScaleForMappingEmToPixels(&font.stbfont, size);
-    font.height = (ascent - descent + linegap) * scale + 0.5;
-
-    /* make tab and newline glyphs invisible */
-    stbtt_bakedchar* g = get_glyphset(font, '\n').glyphs;
-    g['\t'].x1 = g['\t'].x0;
-    g['\n'].x1 = g['\n'].x0;
-
-    return font;
 
 fail:
     if (fp)
@@ -287,7 +306,7 @@ void ren_set_font_tab_width(RenFont* font, int n)
 int ren_get_font_tab_width(RenFont* font)
 {
     GlyphSet* set = get_glyphset(font, '\t');
-    return set.glyphs['\t'].xadvance;
+    return cast(int) set.glyphs['\t'].xadvance;
 }
 
 int ren_get_font_width(RenFont* font, const(char)* text)
@@ -313,9 +332,9 @@ int ren_get_font_height(RenFont* font)
 pragma(inline, true) private RenColor blend_pixel(RenColor dst, RenColor src)
 {
     int ia = 0xff - src.a;
-    dst.r = ((src.r * src.a) + (dst.r * ia)) >> 8;
-    dst.g = ((src.g * src.a) + (dst.g * ia)) >> 8;
-    dst.b = ((src.b * src.a) + (dst.b * ia)) >> 8;
+    dst.r = cast(ubyte)((src.r * src.a) + (dst.r * ia)) >> 8;
+    dst.g = cast(ubyte)((src.g * src.a) + (dst.g * ia)) >> 8;
+    dst.b = cast(ubyte)((src.b * src.a) + (dst.b * ia)) >> 8;
     return dst;
 }
 
@@ -323,20 +342,11 @@ pragma(inline, true) private RenColor blend_pixel2(RenColor dst, RenColor src, R
 {
     src.a = (src.a * color.a) >> 8;
     int ia = 0xff - src.a;
-    dst.r = ((src.r * color.r * src.a) >> 16) + ((dst.r * ia) >> 8);
-    dst.g = ((src.g * color.g * src.a) >> 16) + ((dst.g * ia) >> 8);
-    dst.b = ((src.b * color.b * src.a) >> 16) + ((dst.b * ia) >> 8);
+    dst.r = cast(ubyte)(((src.r * color.r * src.a) >> 16) + ((dst.r * ia) >> 8));
+    dst.g = cast(ubyte)(((src.g * color.g * src.a) >> 16) + ((dst.g * ia) >> 8));
+    dst.b = cast(ubyte)(((src.b * color.b * src.a) >> 16) + ((dst.b * ia) >> 8));
     return dst;
 }
-
-enum string rect_draw_loop(string expr) = `        \
-  for (int j = y1; j < y2; j++) {   \
-    for (int i = x1; i < x2; i++) { \
-      *d = expr;                    \
-      d++;                          \
-    }                               \
-    d += dr;                        \
-  }`;
 
 void ren_draw_rect(RenRect rect, RenColor color)
 {
@@ -356,6 +366,19 @@ void ren_draw_rect(RenRect rect, RenColor color)
     RenColor* d = cast(RenColor*) surf.pixels;
     d += x1 + y1 * surf.w;
     int dr = surf.w - (x2 - x1);
+
+    auto rect_draw_loop(RenColor expr)
+    {
+        for (int j = y1; j < y2; j++)
+        {
+            for (int i = x1; i < x2; i++)
+            {
+                *d = expr;
+                d++;
+            }
+            d += dr;
+        }
+    }
 
     if (color.a == 0xff)
     {
@@ -438,7 +461,7 @@ int ren_draw_text(RenFont* font, const(char)* text, int x, int y, RenColor color
         rect.y = g.y0;
         rect.width = g.x1 - g.x0;
         rect.height = g.y1 - g.y0;
-        ren_draw_image(set.image, &rect, x + g.xoff, y + g.yoff, color);
+        ren_draw_image(set.image, &rect, cast(int)(x + g.xoff), cast(int)(y + g.yoff), color);
         x += g.xadvance;
     }
     return x;

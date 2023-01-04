@@ -1,5 +1,5 @@
 module api.renderer_font;
-@nogc nothrow:
+nothrow:
 extern (C):
 __gshared:
 import bindbc.lua;

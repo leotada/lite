@@ -1,8 +1,9 @@
 module rencache;
-@nogc nothrow:
+nothrow:
 extern (C):
 __gshared:
 import core.stdc.stdio;
+import core.stdc.string : strcpy, strerror, strcmp, strlen, memset, memcpy;
 
 import renderer;
 
@@ -24,10 +25,10 @@ enum
     DRAW_RECT
 }
 
-// static uint[CELLS_X * CELLS_Y] cells_buf1;
-// static uint[CELLS_X * CELLS_Y] cells_buf2;
-// static uint* cells_prev = cells_buf1;
-// static uint* cells = cells_buf2;
+static uint[CELLS_X * CELLS_Y] cells_buf1;
+static uint[CELLS_X * CELLS_Y] cells_buf2;
+static uint* cells_prev;
+static uint* cells;
 static RenRect[CELLS_X * CELLS_Y / 2] rect_buf;
 static char[COMMAND_BUF_SIZE] command_buf = 0;
 static int command_buf_idx;
@@ -61,7 +62,7 @@ enum HASH_INITIAL = 2166136261;
 
 private void hash(uint* h, const(void)* data, int size)
 {
-    const(ubyte)* p = data;
+    const(ubyte)* p = cast(const(ubyte)*) data;
     while (size--)
     {
         *h = (*h ^ *p++) * 16777619;
@@ -103,7 +104,7 @@ private Command* push_command(int type, int size)
     int n = command_buf_idx + size;
     if (n > COMMAND_BUF_SIZE)
     {
-        fprintf(stderr, "Warning: (" ~ SRCFILENAME ~ "): exhausted command buffer\n");
+        fprintf(stderr, "Warning: (SRCFILENAME): exhausted command buffer\n"); // TODO
         return null;
     }
     command_buf_idx = n;
@@ -168,16 +169,17 @@ int rencache_draw_text(RenFont* font, const(char)* text, int x, int y, RenColor 
     RenRect rect = void;
     rect.x = x;
     rect.y = y;
-    rect.width = ren_get_font_width(font, text.ptr);
+    rect.width = ren_get_font_width(font, text);
     rect.height = ren_get_font_height(font);
 
     if (rects_overlap(screen_rect, rect))
     {
-        int sz = strlen(text.ptr) + 1;
-        Command* cmd = push_command(DRAW_TEXT, sizeof(Command) + sz);
+        int sz = cast(int) strlen(text) + 1;
+        Command* cmd = push_command(DRAW_TEXT, cast(int) Command.sizeof + sz);
         if (cmd)
         {
-            memcpy(cmd.text, text.ptr, sz);
+            // memcpy(cmd.text, text, sz);
+            cmd.text = *text;
             cmd.color = color;
             cmd.font = font;
             cmd.rect = rect;
@@ -190,7 +192,7 @@ int rencache_draw_text(RenFont* font, const(char)* text, int x, int y, RenColor 
 
 void rencache_invalidate()
 {
-    memset(cells_prev, 0xff, cells_buf1.sizeof);
+    //    memset(cells_prev, 0xff, cells_buf1.sizeof);
 }
 
 void rencache_begin_frame()
@@ -313,7 +315,8 @@ void rencache_end_frame()
                 break;
             case DRAW_TEXT:
                 ren_set_font_tab_width(cmd.font, cmd.tab_width);
-                ren_draw_text(cmd.font, cmd.text, cmd.rect.x, cmd.rect.y, cmd.color);
+                ren_draw_text(cmd.font, cast(const(char)*) cmd.text,
+                        cmd.rect.x, cmd.rect.y, cmd.color);
                 break;
             default:
                 break;
@@ -322,7 +325,7 @@ void rencache_end_frame()
 
         if (show_debug)
         {
-            RenColor color = {rand(), rand(), rand(), 50};
+            RenColor color = {255, 0, 0, 50};
             ren_draw_rect(r, color);
         }
     }

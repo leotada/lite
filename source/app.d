@@ -1,4 +1,4 @@
-@nogc nothrow:
+nothrow:
 extern (C):
 __gshared:
 public import core.stdc.stdio;
@@ -104,8 +104,9 @@ int main(int argc, char** argv)
     SDL_DisplayMode dm = void;
     SDL_GetCurrentDisplayMode(0, &dm);
 
-    window = SDL_CreateWindow("", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, dm.w * 0.8,
-            dm.h * 0.8, SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_HIDDEN);
+    window = SDL_CreateWindow(cast(const(char)*) "", cast(int) SDL_WINDOWPOS_UNDEFINED,
+            cast(int) SDL_WINDOWPOS_UNDEFINED, cast(int)(dm.w * 0.8), cast(int)(dm.h * 0.8),
+            SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_HIDDEN);
     init_window_icon();
     ren_init(window);
 
@@ -140,5 +141,5 @@ int main(int argc, char** argv)
     lua_close(L);
     SDL_DestroyWindow(window);
 
-    return EXIT_SUCCESS;
+    return 0;
 }

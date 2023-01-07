@@ -1,16 +1,13 @@
 module renderer;
 nothrow:
-extern (C):
+__gshared:
 import bindbc.sdl;
-public import core.stdc.stdio;
-import core.stdc.stdlib : malloc, calloc, free, exit;
-
-//public import stdbool;
-public import core.stdc.assert_;
-public import core.stdc.math;
-
-//static import stb_truetype;
 import arsd.ttf;
+
+import core.stdc.stdio;
+import core.stdc.stdlib : malloc, calloc, free, exit;
+import core.stdc.assert_;
+import core.stdc.math;
 
 enum MAX_GLYPHSET = 256;
 
@@ -37,7 +34,7 @@ struct RenImage
 struct _GlyphSet
 {
     RenImage* image;
-    stbtt_bakedchar[256] glyphs;
+    stbtt_bakedchar* glyphs;
 }
 
 alias GlyphSet = _GlyphSet;
@@ -152,8 +149,7 @@ void ren_free_image(RenImage* image)
 
 private GlyphSet* load_glyphset(RenFont* font, int idx)
 {
-    // GlyphSet* set = check_alloc(calloc(1, GlyphSet.sizeof));
-    GlyphSet* set = new GlyphSet;
+    GlyphSet* set = cast(GlyphSet*) check_alloc(calloc(1, GlyphSet.sizeof));
 
     /* init image */
     int width = 128;
@@ -162,19 +158,20 @@ retry:
     set.image = ren_new_image(width, height);
 
     // /* load glyphs */
-    // float s = stbtt_ScaleForMappingEmToPixels(&font.stbfont, 1) / stbtt_ScaleForPixelHeight(
-    //         &font.stbfont, 1);
-    // int res = stbtt_BakeFontBitmap(font.data, 0, font.size * s,
-    //         cast(void*) set.image.pixels, width, height, idx * 256, 256, set.glyphs);
+    float s = stbtt_ScaleForMappingEmToPixels(&font.stbfont, 1) / stbtt_ScaleForPixelHeight(
+            &font.stbfont, 1);
+    int res = stbtt_BakeFontBitmap(cast(const(ubyte)*)&font.data, 0,
+            font.size * s, cast(ubyte*) set.image.pixels, width, height,
+            idx * 256, 256, set.glyphs);
 
-    // /* retry with a larger image buffer if the buffer wasn't large enough */
-    // if (res < 0)
-    // {
-    //     width *= 2;
-    //     height *= 2;
-    //     ren_free_image(set.image);
-    //     goto retry;
-    // }
+    /* retry with a larger image buffer if the buffer wasn't large enough */
+    if (res < 0)
+    {
+        width *= 2;
+        height *= 2;
+        ren_free_image(set.image);
+        goto retry;
+    }
 
     /* adjust glyph yoffsets and xadvance */
     int ascent = void, descent = void, linegap = void;
@@ -221,8 +218,7 @@ RenFont* ren_load_font(const(char)* filename, float size)
     FILE* fp = null;
 
     /* init font */
-    // font = check_alloc(calloc(1, RenFont.sizeof));
-    font = new RenFont;
+    font = cast(RenFont*) check_alloc(calloc(1, RenFont.sizeof));
     font.size = size;
 
     /* load font into buffer */
@@ -258,7 +254,7 @@ RenFont* ren_load_font(const(char)* filename, float size)
         font.height = cast(int)((ascent - descent + linegap) * scale + 0.5);
 
         /* make tab and newline glyphs invisible */
-        stbtt_bakedchar* g = get_glyphset(font, '\n').glyphs.ptr;
+        stbtt_bakedchar* g = get_glyphset(font, '\n').glyphs;
         g['\t'].x1 = g['\t'].x0;
         g['\n'].x1 = g['\n'].x0;
 

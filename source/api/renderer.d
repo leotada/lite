@@ -1,11 +1,11 @@
 module api.renderer;
 nothrow:
-extern (C):
+__gshared:
 import bindbc.lua;
 import api;
 import rencache;
 import renderer;
-import api.renderer_font : API_TYPE_FONT;
+import api.renderer_font : API_TYPE_FONT, luaopen_renderer_font;
 
 private RenColor checkcolor(lua_State* L, int idx, int def)
 {
@@ -24,6 +24,23 @@ private RenColor checkcolor(lua_State* L, int idx, int def)
     color.a = cast(ubyte) luaL_optnumber(L, -1, 255);
     lua_pop(L, 4);
     return color;
+}
+
+private const(luaL_Reg)[8] lib = [
+    {"show_debug", &f_show_debug}, {"get_size", &f_get_size},
+    {"begin_frame", &f_begin_frame}, {"end_frame", &f_end_frame},
+    {"set_clip_rect", &f_set_clip_rect}, {"draw_rect", &f_draw_rect},
+    {"draw_text", &f_draw_text}, {null, null},
+];
+
+extern (C):
+
+int luaopen_renderer(lua_State* L)
+{
+    luaL_newlib(L, lib);
+    luaopen_renderer_font(L);
+    lua_setfield(L, -2, "font");
+    return 1;
 }
 
 private int f_show_debug(lua_State* L)
@@ -86,22 +103,5 @@ private int f_draw_text(lua_State* L)
     RenColor color = checkcolor(L, 5, 255);
     x = rencache_draw_text(*font, text, x, y, color);
     lua_pushnumber(L, x);
-    return 1;
-}
-
-private const(luaL_Reg)[8] lib = [
-    {"show_debug", &f_show_debug}, {"get_size", &f_get_size},
-    {"begin_frame", &f_begin_frame}, {"end_frame", &f_end_frame},
-    {"set_clip_rect", &f_set_clip_rect}, {"draw_rect", &f_draw_rect},
-    {"draw_text", &f_draw_text}, {null, null},
-];
-
-int luaopen_renderer_font(lua_State* L);
-
-int luaopen_renderer(lua_State* L)
-{
-    luaL_newlib(L, lib);
-    luaopen_renderer_font(L);
-    lua_setfield(L, -2, "font");
     return 1;
 }

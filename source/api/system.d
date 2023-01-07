@@ -1,19 +1,18 @@
 module api.system;
 nothrow:
-extern (C):
-//__gshared:
+__gshared:
 import std.string : toStringz, fromStringz;
 import bindbc.sdl;
 import bindbc.lua;
-public import core.stdc.string : strcpy, strerror, strcmp, strlen;
-public import core.stdc.stdio : sprintf;
-public import core.stdc.ctype;
-public import core.sys.posix.dirent;
-public import core.sys.posix.unistd;
-public import core.stdc.errno;
-public import core.sys.posix.sys.stat;
-public import api;
-public import rencache;
+import core.stdc.string : strcpy, strerror, strcmp, strlen;
+import core.stdc.stdio : sprintf;
+import core.stdc.ctype;
+import core.sys.posix.dirent;
+import core.sys.posix.unistd;
+import core.stdc.errno;
+import core.sys.posix.sys.stat;
+import api;
+import rencache;
 
 version (Windows)
 {
@@ -48,6 +47,27 @@ private char* key_name(char* dst, int sym)
         p++;
     }
     return dst;
+}
+
+private const(luaL_Reg)[17] lib = [
+    {"poll_event", &f_poll_event}, {"set_cursor", &f_set_cursor},
+    {"set_window_title", &f_set_window_title},
+    {"set_window_mode", &f_set_window_mode},
+    {"window_has_focus", &f_window_has_focus},
+    {"show_confirm_dialog", &f_show_confirm_dialog}, {"chdir", &f_chdir},
+    {"list_dir", &f_list_dir}, {"absolute_path", &f_absolute_path},
+    {"get_file_info", &f_get_file_info}, {"get_clipboard", &f_get_clipboard},
+    {"set_clipboard", &f_set_clipboard}, {"get_time", &f_get_time},
+    {"sleep", &f_sleep}, {"exec", &f_exec}, {"fuzzy_match", &f_fuzzy_match},
+    {null, null}
+];
+
+extern (C):
+
+int luaopen_system(lua_State* L)
+{
+    luaL_newlib(L, lib);
+    return 1;
 }
 
 private int f_poll_event(lua_State* L)
@@ -461,24 +481,5 @@ private int f_fuzzy_match(lua_State* L)
     }
 
     lua_pushnumber(L, score - cast(int) strlen(str));
-    return 1;
-}
-
-private const(luaL_Reg)[17] lib = [
-    {"poll_event", &f_poll_event}, {"set_cursor", &f_set_cursor},
-    {"set_window_title", &f_set_window_title},
-    {"set_window_mode", &f_set_window_mode},
-    {"window_has_focus", &f_window_has_focus},
-    {"show_confirm_dialog", &f_show_confirm_dialog}, {"chdir", &f_chdir},
-    {"list_dir", &f_list_dir}, {"absolute_path", &f_absolute_path},
-    {"get_file_info", &f_get_file_info}, {"get_clipboard", &f_get_clipboard},
-    {"set_clipboard", &f_set_clipboard}, {"get_time", &f_get_time},
-    {"sleep", &f_sleep}, {"exec", &f_exec}, {"fuzzy_match", &f_fuzzy_match},
-    {null, null}
-];
-
-int luaopen_system(lua_State* L)
-{
-    luaL_newlib(L, lib);
     return 1;
 }

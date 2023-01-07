@@ -1,7 +1,6 @@
 module api.renderer_font;
 nothrow:
-extern (C):
-//__gshared:
+__gshared:
 import bindbc.lua;
 import api;
 import renderer;
@@ -9,9 +8,9 @@ import rencache;
 
 public immutable const(char)* API_TYPE_FONT = "Font";
 
-private RenFont** self;
+private alias self = RenFont**;
 
-private int f_load(lua_State* L)
+extern (C) private int f_load(lua_State* L)
 {
     const(char)* filename = luaL_checkstring(L, 1);
     float size = luaL_checknumber(L, 2);
@@ -25,7 +24,7 @@ private int f_load(lua_State* L)
     return 1;
 }
 
-private int f_set_tab_width(lua_State* L)
+extern (C) private int f_set_tab_width(lua_State* L)
 {
     RenFont** self = cast(RenFont**) luaL_checkudata(L, 1, API_TYPE_FONT);
     int n = cast(int) luaL_checknumber(L, 2);
@@ -33,7 +32,7 @@ private int f_set_tab_width(lua_State* L)
     return 0;
 }
 
-private int f_gc(lua_State* L)
+extern (C) private int f_gc(lua_State* L)
 {
     RenFont** self = cast(RenFont**) luaL_checkudata(L, 1, API_TYPE_FONT);
     if (*self)
@@ -43,7 +42,7 @@ private int f_gc(lua_State* L)
     return 0;
 }
 
-private int f_get_width(lua_State* L)
+extern (C) private int f_get_width(lua_State* L)
 {
     RenFont** self = cast(RenFont**) luaL_checkudata(L, 1, API_TYPE_FONT);
     const(char)* text = luaL_checkstring(L, 2);
@@ -51,7 +50,7 @@ private int f_get_width(lua_State* L)
     return 1;
 }
 
-private int f_get_height(lua_State* L)
+extern (C) private int f_get_height(lua_State* L)
 {
     RenFont** self = cast(RenFont**) luaL_checkudata(L, 1, API_TYPE_FONT);
     lua_pushnumber(L, ren_get_font_height(*self));

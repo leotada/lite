@@ -1,13 +1,12 @@
 nothrow:
-extern (C):
-//__gshared:
-public import core.stdc.stdio;
-
+__gshared:
 import bindbc.sdl;
 import bindbc.lua;
+import std.string : toStringz;
+import core.stdc.stdio;
+import core.stdc.string : strcpy, strerror, strcmp, strlen;
 import api;
-public import renderer;
-public import core.stdc.string : strcpy, strerror, strcmp, strlen;
+import renderer;
 
 version (Windows)
 {
@@ -80,7 +79,7 @@ private void init_window_icon()
     }
 }
 
-int main(int argc, char** argv)
+int main(string[] args)
 {
     version (Windows)
     {
@@ -115,9 +114,10 @@ int main(int argc, char** argv)
     api_load_libs(L);
 
     lua_newtable(L);
-    for (int i = 0; i < argc; i++)
+
+    foreach (i, string arg; args)
     {
-        lua_pushstring(L, argv[i]);
+        lua_pushstring(L, arg.toStringz);
         lua_rawseti(L, -2, i + 1);
     }
     lua_setglobal(L, "ARGS");

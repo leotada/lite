@@ -1,7 +1,6 @@
 module rencache;
 nothrow:
-extern (C):
-//__gshared:
+__gshared:
 import core.stdc.stdio;
 import core.stdc.string : strcpy, strerror, strcmp, strlen, memset, memcpy;
 

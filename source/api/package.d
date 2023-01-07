@@ -1,9 +1,9 @@
 module api;
 nothrow:
+__gshared:
 import bindbc.lua;
-
-extern (C) int luaopen_system(lua_State* L);
-extern (C) int luaopen_renderer(lua_State* L);
+import api.system : luaopen_system;
+import api.renderer : luaopen_renderer;
 
 private static const luaL_Reg[3] libs = [
     {"system", &luaopen_system}, {"renderer", &luaopen_renderer}, {null, null}

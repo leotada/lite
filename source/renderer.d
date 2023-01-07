@@ -1,7 +1,6 @@
 module renderer;
 nothrow:
 extern (C):
-__gshared:
 import bindbc.sdl;
 public import core.stdc.stdio;
 import core.stdc.stdlib : malloc, calloc, free, exit;
@@ -9,7 +8,9 @@ import core.stdc.stdlib : malloc, calloc, free, exit;
 //public import stdbool;
 public import core.stdc.assert_;
 public import core.stdc.math;
-public import lib.stb.stb_truetype;
+
+//static import stb_truetype;
+import arsd.ttf;
 
 enum MAX_GLYPHSET = 256;
 

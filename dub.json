@@ -1,0 +1,34 @@
+{
+	"authors": [
+		"Leonardo Tada"
+	],
+	"buildRequirements": [
+		"allowWarnings"
+	],
+	"copyright": "Copyright © 2023, Leonardo Tada",
+	"dependencies": {
+		"arsd-official:ttf": "~>10.9.8",
+		"bindbc-lua": "~>0.5.1",
+		"bindbc-sdl": "~>1.2.4"
+	},
+	"description": "A lite text editor",
+	"libs": [
+		"SDL2",
+		"SDL2_image",
+		"lua5.4"
+	],
+	"license": "MIT",
+	"name": "lite",
+	"subConfigurations": {
+		"bindbc-lua": "static",
+		"bindbc-sdl": "static"
+	},
+	"versions": [
+		"SDL_2022",
+		"BindSDL_Static",
+		"SDL_Image",
+		"SDL_TTF",
+		"BindLua_Static",
+		"LUA_54"
+	]
+}

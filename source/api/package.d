@@ -1,10 +1,9 @@
 module api;
 nothrow:
-extern (C):
 import bindbc.lua;
 
-int luaopen_system(lua_State* L);
-int luaopen_renderer(lua_State* L);
+extern (C) int luaopen_system(lua_State* L);
+extern (C) int luaopen_renderer(lua_State* L);
 
 private static const luaL_Reg[3] libs = [
     {"system", &luaopen_system}, {"renderer", &luaopen_renderer}, {null, null}

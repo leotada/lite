@@ -1,7 +1,7 @@
 module api.system;
 nothrow:
 extern (C):
-__gshared:
+//__gshared:
 import std.string : toStringz, fromStringz;
 import bindbc.sdl;
 import bindbc.lua;
@@ -20,7 +20,7 @@ version (Windows)
     public import core.sys.windows.windows;
 }
 
-extern SDL_Window* window;
+private SDL_Window* window;
 
 private const(char)* button_name(int button)
 {

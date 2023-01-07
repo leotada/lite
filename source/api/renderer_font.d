@@ -1,13 +1,14 @@
 module api.renderer_font;
 nothrow:
 extern (C):
-__gshared:
+//__gshared:
 import bindbc.lua;
 import api;
 import renderer;
 import rencache;
 
-immutable const(char)* API_TYPE_FONT = "Font";
+public immutable const(char)* API_TYPE_FONT = "Font";
+
 private RenFont** self;
 
 private int f_load(lua_State* L)

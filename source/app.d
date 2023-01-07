@@ -1,6 +1,6 @@
 nothrow:
 extern (C):
-__gshared:
+//__gshared:
 public import core.stdc.stdio;
 
 import bindbc.sdl;
@@ -22,7 +22,7 @@ version (OSX)
     //public import mach-o/dyld;
 }
 
-SDL_Window* window;
+private SDL_Window* window;
 
 private double get_scale()
 {

@@ -1,12 +1,11 @@
 module api.renderer;
 nothrow:
 extern (C):
+import bindbc.lua;
 import api;
 import rencache;
 import renderer;
-import bindbc.lua;
-
-immutable const(char)* API_TYPE_FONT = "Font";
+import api.renderer_font : API_TYPE_FONT;
 
 private RenColor checkcolor(lua_State* L, int idx, int def)
 {

@@ -134,9 +134,9 @@ void ren_get_size(int* x, int* y)
 RenImage* ren_new_image(int width, int height)
 {
     assert(width > 0 && height > 0);
-    RenImage* image = new RenImage;
+    RenImage* image = cast(RenImage*) malloc(RenImage.sizeof + width * height * RenColor.sizeof);
     check_alloc(image);
-    // image.pixels = cast(void*)(image.ptr + 1);
+    image.pixels = cast(RenColor*)(image + 1);
     image.width = width;
     image.height = height;
     return image;

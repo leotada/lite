@@ -1,5 +1,6 @@
 #include <stdio.h>
-#include <SDL2/SDL.h>
+#include <SDL3/SDL.h>
+#include <stdlib.h>
 #include "api/api.h"
 #include "renderer.h"
 
@@ -16,13 +17,9 @@ SDL_Window *window;
 
 
 static double get_scale(void) {
-  float dpi;
-  SDL_GetDisplayDPI(0, NULL, &dpi, NULL);
-#if _WIN32
-  return dpi / 96.0;
-#else
-  return 1.0;
-#endif
+  float scale = SDL_GetDisplayContentScale(SDL_GetPrimaryDisplay());
+  if (scale == 0.0f) { return 1.0; } // Fallback
+  return scale;
 }
 
 
@@ -48,15 +45,12 @@ static void init_window_icon(void) {
 #ifndef _WIN32
   #include "../icon.inl"
   (void) icon_rgba_len; /* unused */
-  SDL_Surface *surf = SDL_CreateRGBSurfaceFrom(
-    icon_rgba, 64, 64,
-    32, 64 * 4,
-    0x000000ff,
-    0x0000ff00,
-    0x00ff0000,
-    0xff000000);
+  SDL_Surface *surf = SDL_CreateSurfaceFrom(
+    64, 64,
+    SDL_PIXELFORMAT_RGBA32,
+    icon_rgba, 64 * 4);
   SDL_SetWindowIcon(window, surf);
-  SDL_FreeSurface(surf);
+  SDL_DestroySurface(surf);
 #endif
 }
 
@@ -68,24 +62,35 @@ int main(int argc, char **argv) {
   SetProcessDPIAware();
 #endif
 
-  SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
+  if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS)) {
+    fprintf(stderr, "Error: SDL_Init failed: %s\n", SDL_GetError());
+    return 1;
+  }
   SDL_EnableScreenSaver();
-  SDL_EventState(SDL_DROPFILE, SDL_ENABLE);
+  SDL_SetEventEnabled(SDL_EVENT_DROP_FILE, true);
   atexit(SDL_Quit);
 
 #ifdef SDL_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR /* Available since 2.0.8 */
   SDL_SetHint(SDL_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR, "0");
 #endif
-#if SDL_VERSION_ATLEAST(2, 0, 5)
   SDL_SetHint(SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH, "1");
-#endif
 
-  SDL_DisplayMode dm;
-  SDL_GetCurrentDisplayMode(0, &dm);
+  const SDL_DisplayMode *dm = SDL_GetCurrentDisplayMode(SDL_GetPrimaryDisplay());
+  int w = 800, h = 600;
+  if (dm) {
+      w = dm->w * 0.8;
+      h = dm->h * 0.8;
+  }
 
   window = SDL_CreateWindow(
-    "", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, dm.w * 0.8, dm.h * 0.8,
-    SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_HIDDEN);
+    "", w, h,
+    SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY | SDL_WINDOW_HIDDEN);
+
+  if (!window) {
+    fprintf(stderr, "Error: SDL_CreateWindow failed: %s\n", SDL_GetError());
+    return 1;
+  }
+
   init_window_icon();
   ren_init(window);
 

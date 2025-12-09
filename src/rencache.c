@@ -1,5 +1,7 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include "rencache.h"
+#include "renderer.h"
 
 /* a cache over the software renderer -- all drawing operations are stored as
 ** commands when issued. At the end of the frame we write the commands to a grid
@@ -263,7 +265,7 @@ void rencache_end_frame(void) {
     }
 
     if (show_debug) {
-      RenColor color = { rand(), rand(), rand(), 50 };
+      RenColor color = { (uint8_t)rand(), (uint8_t)rand(), (uint8_t)rand(), 50 };
       ren_draw_rect(r, color);
     }
   }

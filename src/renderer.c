@@ -2,6 +2,7 @@
 #include <stdbool.h>
 #include <assert.h>
 #include <math.h>
+#include <stdlib.h>
 #include "lib/stb/stb_truetype.h"
 #include "renderer.h"
 

@@ -68,10 +68,22 @@ endif
 
 inc = include_directories('src')
 
-executable('lite',
+lite_exe = executable('lite',
   lite_sources,
   dependencies : [sdl_dep, m_dep],
   include_directories : inc,
   c_args : c_args,
   install : true
+)
+
+# Install data directory
+install_subdir('data', install_dir : 'share/lite')
+
+# Copy data directory to build directory for running locally
+python = import('python').find_installation('python3')
+
+custom_target('copy_data',
+  output : 'data',
+  command : [python, meson.current_source_dir() / 'scripts/copy_dir.py', meson.current_source_dir() / 'data', '@OUTPUT@'],
+  build_by_default : true
 )

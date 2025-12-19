@@ -1,0 +1,32 @@
+name "lite-d"
+description "A rewrite of the lite editor in D"
+authors "Antigravity"
+copyright "Copyright © 2025, Antigravity"
+license "MIT"
+
+targetType "executable"
+sourcePaths "source" "src/lib/lua54" "src/lib/stb"
+importPaths "source" "src/lib/lua54" "src/lib/stb"
+
+# C libraries
+# Lua 5.4
+lflags "-lm" platform="posix" # math lib for lua
+# SDL3
+libs "SDL3"
+
+# Compiler flags for C files
+cSourceFlags "-Ilocal_include" "-std=gnu11" "-DLUA_USE_POSIX" "-D_GNU_SOURCE" platform="posix" file="src/lib/lua54/l*.c"
+cSourceFlags "-Ilocal_include" "-std=gnu11" "-DLUA_USE_POSIX" "-D_GNU_SOURCE" platform="posix" file="src/lib/lua54/loadlib.c"
+
+sourcePaths "source"
+importPaths "source"
+
+# C libraries setup
+# We use a script to compile them because ImportC fails on system headers (GCC 15)
+preGenerateCommands "scripts/build_clibs.sh"
+lflags "-Lbuild" "-lclibs"
+
+# Files to compile (D only)
+
+# Exclude the original C main and other headers we don't want D to compile as D
+excludeSourceFiles "src/main.c" "src/rencache.c" "src/renderer.c" "src/api/*.c"
